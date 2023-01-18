@@ -56,9 +56,14 @@ class Swap:
                             if volume>config.threshhold:
                                 self.data[block].append({"swapFrom":i['coins'][int(split_event_data[0],16)],'swapTo':i['coins'][int(split_event_data[2],16)],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})
                         elif i['host']=='Uni':
-                            volume = int(split_event_data[1],16)/config.coin[i['coins'][1]]['decimal']
-                            if volume>config.threshhold:
-                                self.data[block].append({"swapFrom":i['coins'][1],'swapTo':i['coins'][0],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})                    
+                            if int(split_event_data[1],16) > 0 and int(split_event_data[1],16) < 1e50:
+                                volume = int(split_event_data[1],16)/config.coin[i['coins'][1]]['decimal']
+                                if volume>config.threshhold:
+                                    self.data[block].append({"swapFrom":i['coins'][1],'swapTo':i['coins'][0],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})
+                            else:
+                                volume = int(split_event_data[0],16)/config.coin[i['coins'][0]]['decimal']
+                                if volume>config.threshhold:
+                                    self.data[block].append({"swapFrom":i['coins'][0],'swapTo':i['coins'][1],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})                 
                 self.now_block = new_block
             keys = self.data.keys()
             if len(keys) > 1000:
@@ -89,6 +94,7 @@ class StableCoinRatio:
         self.num = num
         data = {}
         for k in range(len(config.pool_addresses)):
+            print(k)
             pool_address = config.pool_addresses[k]
             pool_name = config.pool_names[k]
             coin_name = config.coin_names[k]
@@ -121,7 +127,3 @@ class StableCoinRatio:
                 coin_num = i['instance'].functions.balanceOf(pool).call(block_identifier=block) / i['decimal']
                 data[i['name']].append(float(coin_num))
         return data
-
-
-if __name__ == "__main__":
-    swap = Swap()
