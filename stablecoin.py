@@ -52,7 +52,7 @@ class Swap:
                         for k in range(len(topics)):
                             topics[k] = topics[k].hex()
                         if i['host']=='Curve':
-                            volume = int(split_event_data[1],16)/config.coin[i['coins'][int(split_event_data[2],16)]]['decimal']
+                            volume = int(split_event_data[1],16)/config.coin[i['coins'][int(split_event_data[0],16)]]['decimal']
                             if volume>config.threshhold:
                                 self.data[block].append({"swapFrom":i['coins'][int(split_event_data[0],16)],'swapTo':i['coins'][int(split_event_data[2],16)],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})
                         elif i['host']=='Uni':
