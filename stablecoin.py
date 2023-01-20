@@ -10,9 +10,10 @@ import threading
 class Swap:
 
     def __init__(self):
-        self.web3 = Web3(HTTPProvider(config.filter_provider))
+        self.web3 = [Web3(HTTPProvider(config.filter_provider[i]))  for i in range(len(config.filter_provider))]
+        self.index = 0
         self.fliters = []
-        self.now_block = self.web3.eth.blockNumber - 4*60*4
+        self.now_block = self.web3[self.index%len(self.web3)].eth.blockNumber - 4*60*4
         for i in range(len(config.pool_names)):
             host = config.pool_names[i].split(" ")[0]
             topic = config.swap_event_topic[host]
@@ -25,12 +26,13 @@ class Swap:
     def run(self):
         while True:
             try:
-                new_block = self.web3.eth.blockNumber
+                self.index+=1
+                new_block = self.web3[self.index%len(self.web3)].eth.blockNumber
                 if new_block - self.now_block >= 1:
                     for i in range(self.now_block+1,new_block+1):
                         self.data[i] = []
                     for i in self.fliters:
-                        filter = self.web3.eth.filter({
+                        filter = self.web3[self.index%len(self.web3)].eth.filter({
                             "fromBlock": self.now_block+1,
                             "toBlock": new_block,
                             "address": i['address'],
@@ -41,7 +43,7 @@ class Swap:
                         log_entries = filter.get_all_entries()
                         for j in log_entries:
                             block = j['blockNumber']
-                            timestamp = self.web3.eth.getBlock(int(block)).timestamp
+                            timestamp = self.web3[self.index%len(self.web3)].eth.getBlock(int(block)).timestamp
                             hash = j['transactionHash'].hex()
                             address = j['address']
                             topics = j['topics']
@@ -56,7 +58,7 @@ class Swap:
                             if i['host']=='Curve':
                                 volume = int(split_event_data[1],16)/config.coin[i['coins'][int(split_event_data[0],16)]]['decimal']
                                 if volume>config.threshhold:
-                                    self.data[block].append({"swapFrom":i['coins'][int(split_event_data[0],16)],'swapTo':i['coins'][int(split_event_data[2],16)],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})
+                                    self.data[block].append({"timestamp":timestamp,"swapFrom":i['coins'][int(split_event_data[0],16)],'swapTo':i['coins'][int(split_event_data[2],16)],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})
                             elif i['host']=='Uni':
                                 if int(split_event_data[1],16) > 0 and int(split_event_data[1],16) < 1e50:
                                     volume = int(split_event_data[1],16)/config.coin[i['coins'][1]]['decimal']
@@ -69,7 +71,7 @@ class Swap:
                     self.now_block = new_block
             except Exception as e:
                 print(e)
-            time.sleep(10)
+            time.sleep(15)
 
 
 class StableCoinRatio:
@@ -125,3 +127,6 @@ class StableCoinRatio:
                 coin_num = i['instance'].functions.balanceOf(pool).call(block_identifier=block) / i['decimal']
                 data[i['name']].append(float(coin_num))
         return data
+
+if __name__ == "__main__":
+    Swap()
