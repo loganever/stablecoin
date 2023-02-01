@@ -5,6 +5,9 @@ import time
 from base import loadts2block
 import config
 import threading
+import logging
+
+logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
 
 
 class Swap:
@@ -20,6 +23,7 @@ class Swap:
             address = config.pool_addresses[i]
             self.fliters.append({"address":Web3.toChecksumAddress(address),"name":config.pool_names[i],"topic":topic,"host":host,"coins":config.coin_names[i]})
         self.data = {}
+        logging.info(self.now_block)
         thread = threading.Thread(target=self.run)
         thread.start()
 
@@ -28,6 +32,7 @@ class Swap:
             try:
                 self.index+=1
                 new_block = self.web3[self.index%len(self.web3)].eth.blockNumber
+                logging.info(str(new_block)+" "+str(self.now_block)+" "+str(self.index%len(self.web3)))
                 if new_block - self.now_block >= 1:
                     for i in range(self.now_block+1,new_block+1):
                         self.data[i] = []
@@ -41,6 +46,7 @@ class Swap:
                             ]
                         })
                         log_entries = filter.get_all_entries()
+                        logging.info("OK")
                         for j in log_entries:
                             block = j['blockNumber']
                             timestamp = self.web3[self.index%len(self.web3)].eth.getBlock(int(block)).timestamp
@@ -70,8 +76,8 @@ class Swap:
                                         self.data[block].append({"timestamp":timestamp,"swapFrom":i['coins'][0],'swapTo':i['coins'][1],'volume':volume,'transcationHash':hash,'pool_address':address,"pool_name":i['name']})                 
                     self.now_block = new_block
             except Exception as e:
-                print(e)
-            time.sleep(15)
+                logging.error(e)
+            time.sleep(60)
 
 
 class StableCoinRatio:
